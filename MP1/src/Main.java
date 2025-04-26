@@ -1,6 +1,6 @@
-
 import java.io.IOException;
 import java.io.Serializable;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.*;
 import java.io.*;
@@ -8,16 +8,23 @@ import java.util.Scanner;
 
 public class Main {
     public static void main(String[] args) {
+        try {
+            KartaDostepu.wczytajEkstensje("karty.txt");
+            System.out.println("Dane zostały wczytane.");
+        } catch (IOException | ClassNotFoundException e) {
+            e.printStackTrace();
+            System.out.println("Błąd wczytywania danych.");
+        }
 
         Scanner scanner = new Scanner(System.in);
         boolean running = true;
 
         while (running) {
             System.out.println("\n╔══════════════════════════════╗");
-            System.out.println("║   SYSTEM KART DOSTĘPU       ║");
+            System.out.println("║   SYSTEM KART DOSTĘPU        ║");
             System.out.println("╠══════════════════════════════╣");
             System.out.println("║ 1. ➕ Dodaj dostęp           ║");
-            System.out.println("║ 2. 👥 Wyświetl użytkowników ║");
+            System.out.println("║ 2. 👥 Wyświetl użytkowników  ║");
             System.out.println("║ 3. ❌ Usuń użytkownika       ║");
             System.out.println("║ 4. 🏢 Przydziel dostęp       ║");
             System.out.println("║ 5. 🚫 Odbierz dostęp         ║");
@@ -76,32 +83,13 @@ public class Main {
                         System.out.println("Błąd: UID może zawierać tylko cyfry.");
                     }
 
-                    new KartaDostepu(uid, u);
+                    new KartaDostepu(uid, u, LocalDate.now());  // Przekazujemy również datę wydania
                     System.out.println("Dodano użytkownika i kartę.");
                 }
                 case 2 -> KartaDostepu.pokazEkstensje();
-
-                case 3 -> {
-                    System.out.print("Podaj UID karty do usunięcia: ");
-                    String uid = scanner.nextLine();
-                    KartaDostepu.usunKarte(uid);
-                }
-
-                case 4 -> {
-                    System.out.print("Podaj UID karty: ");
-                    String uid = scanner.nextLine();
-                    System.out.println("Dostępne budynki: " + ListaBudynkow.budynki);
-                    System.out.print("Podaj nazwę budynku: ");
-                    String wejscie = scanner.nextLine();
-                    KartaDostepu.przydzielWejscie(uid, wejscie);
-                }
-
-                case 5 -> {
-                    System.out.print("Podaj UID karty: ");
-                    String uid = scanner.nextLine();
-                    KartaDostepu.odbierzWejscie(uid);
-                }
-
+                case 3 -> KartaDostepu.usunKarte();
+                case 4 -> KartaDostepu.przydzielWejscie();
+                case 5 -> KartaDostepu.odbierzWejscie();
                 case 0 -> {
                     try {
                         KartaDostepu.zapiszEkstensje("karty.txt");
@@ -116,11 +104,10 @@ public class Main {
     }
 }
 
-
 class Adres implements Serializable {
-    private String ulica;
-    private String miasto;
-    private String kodPocztowy;
+    private final String ulica;
+    private final String miasto;
+    private final String kodPocztowy;
 
     public Adres(String ulica, String miasto, String kodPocztowy) {
         this.ulica = ulica;
@@ -150,14 +137,11 @@ class Adres implements Serializable {
     }
 }
 
-
-
 class Uzytkownik implements Serializable {
-    private String imie;
-    private String nazwisko;
-    private Adres adres;
+    private final String imie;
+    private final String nazwisko;
+    private final Adres adres;
     private String telefon;
-
 
     public Uzytkownik(String imie, String nazwisko, Adres adres) {
         this.imie = imie;
@@ -169,11 +153,9 @@ class Uzytkownik implements Serializable {
         this.telefon = telefon;
     }
 
-
     public Optional<String> getTelefon() {
         return Optional.ofNullable(telefon);
     }
-
 
     public String getImie() {
         return imie;
@@ -189,38 +171,25 @@ class Uzytkownik implements Serializable {
 
     @Override
     public String toString() {
-        return getImie() +" "+ getNazwisko()+ ", Adres: " + adres + (telefon != null ? ", Tel: " + telefon : "");
+        return getImie() + " " + getNazwisko() + ", Adres: " + adres + (telefon != null ? ", Tel: " + telefon : "");
     }
-
 }
 
-
 class KartaDostepu implements Serializable {
-    private static List<KartaDostepu> ekstensja = new ArrayList<>();
+    private static final List<KartaDostepu> ekstensja = new ArrayList<>();
     private static int licznikKart = 0;
+    private final String uid;
+    private final Uzytkownik uzytkownik;
+    private final List<ZdarzenieDostepu> historiaZdarzen = new ArrayList<>();
+    private final List<String> dostepy = new ArrayList<>();
+    private LocalDate dataWydania;
 
-    private String uid;
-    private Uzytkownik uzytkownik;
-    private List<ZdarzenieDostepu> historiaZdarzen = new ArrayList<>();
-    private List<String> dostepy = new ArrayList<>();
-
-    public KartaDostepu(String uid, Uzytkownik uzytkownik) {
+    public KartaDostepu(String uid, Uzytkownik uzytkownik, LocalDate dataWydania) {
         this.uid = uid;
         this.uzytkownik = uzytkownik;
+        this.dataWydania = dataWydania;
         ekstensja.add(this);
         licznikKart++;
-    }
-
-    public void dodajZdarzenie(ZdarzenieDostepu zdarzenie) {
-        historiaZdarzen.add(zdarzenie);
-    }
-
-    public int getLiczbaZdarzen() {
-        return historiaZdarzen.size();
-    }
-
-    public static int getLiczbaKart() {
-        return licznikKart;
     }
 
     public static void pokazEkstensje() {
@@ -233,20 +202,16 @@ class KartaDostepu implements Serializable {
         PrintWriter out = new PrintWriter(new FileWriter(plik));
         for (KartaDostepu karta : ekstensja) {
             out.println(karta.uid + ";" + karta.uzytkownik.getImie() + ";" + karta.uzytkownik.getNazwisko() + ";" + karta.uzytkownik.getAdres().toCSV() + ";" + karta.uzytkownik.getTelefon().orElse("") + ";" + String.join(",", karta.dostepy));
-
         }
         out.close();
     }
 
-
-    public static void usunKarte(String uid) {
-
+    public static void usunKarte() {
         System.out.println("Aktywne karty:");
         for (int i = 0; i < ekstensja.size(); i++) {
             KartaDostepu karta = ekstensja.get(i);
             System.out.println((i + 1) + ". UID: " + karta.uid + " | " + karta.uzytkownik.getNazwisko());
         }
-
 
         System.out.print("Wybierz numer użytkownika do usunięcia: ");
         Scanner scanner = new Scanner(System.in);
@@ -261,50 +226,160 @@ class KartaDostepu implements Serializable {
         }
     }
 
+    public static void przydzielWejscie() {
+        Scanner scanner = new Scanner(System.in);
+        System.out.println("Wybierz użytkownika, któremu chcesz przydzielić dostęp do budynku:");
 
-    public static void przydzielWejscie(String uid, String wejscie) {
-        if (!ListaBudynkow.budynki.contains(wejscie)) {
-            System.out.println("Nie można przydzielić – budynek nie istnieje.");
-            return;
+        for (int i = 0; i < ekstensja.size(); i++) {
+            KartaDostepu karta = ekstensja.get(i);
+            System.out.println((i + 1) + ". UID: " + karta.uid + " | " + karta.uzytkownik.getNazwisko());
+            System.out.println("  Dostępy: " + (karta.dostepy.isEmpty() ? "Brak dostępów" : String.join(", ", karta.dostepy)));
         }
-        for (KartaDostepu karta : ekstensja) {
-            if (karta.uid.equals(uid)) {
-                if (karta.dostepy.contains(wejscie)) {
-                    System.out.println("Użytkownik ma już dostęp do " + wejscie);
-                } else {
-                    karta.dostepy.add(wejscie);
-                    System.out.println("Przydzielono dostęp do " + wejscie);
+
+        int wybor = -1;
+        while (wybor < 1 || wybor > ekstensja.size()) {
+            System.out.println("Wybierz numer użytkownika: ");
+            if (scanner.hasNextInt()) {
+                wybor = scanner.nextInt();
+                scanner.nextLine();
+                if (wybor < 1 || wybor > ekstensja.size()) {
+                    System.out.println("Niepoprawny numer użytkownika. Wybierz numer z listy.");
                 }
-                return;
+            } else {
+                System.out.println("Błąd: Wprowadź poprawną liczbę.");
+                scanner.nextLine();
             }
         }
-        System.out.println("Nie znaleziono karty o UID: " + uid);
+
+        KartaDostepu karta = ekstensja.get(wybor - 1);
+        System.out.print("Dostęp do jakiego budynku chcesz przydzielić?");
+
+        for (int i = 0; i < ListaBudynkow.budynki.size(); i++) {
+            System.out.println((i + 1) + ". " + ListaBudynkow.budynki.get(i));
+        }
+
+        int wyborBudynek = -1;
+        while (wyborBudynek < 1 || wyborBudynek > ListaBudynkow.budynki.size()) {
+            System.out.print("Wybierz numer budynku: ");
+            if (scanner.hasNextInt()) {
+                wyborBudynek = scanner.nextInt();
+                scanner.nextLine();
+                if (wyborBudynek < 1 || wyborBudynek > ListaBudynkow.budynki.size()) {
+                    System.out.println("Niepoprawny numer budynku. Wybierz numer z listy.");
+                }
+            } else {
+                System.out.println("Błąd: Wprowadź poprawną liczbę.");
+                scanner.nextLine();
+            }
+        }
+
+        String budynek = ListaBudynkow.budynki.get(wyborBudynek - 1);
+
+        if (karta.dostepy.contains(budynek)) {
+            System.out.println("Błąd: Użytkownik już ma dostęp do " + budynek);
+        } else {
+            karta.dostepy.add(budynek);
+            System.out.println("Przydzielono dostęp do " + budynek + " użytkownikowi " + karta.uzytkownik.getImie() + " " + karta.uzytkownik.getNazwisko());
+        }
     }
 
-    public static void odbierzWejscie(String uid) {
-        for (KartaDostepu karta : ekstensja) {
-            if (karta.uid.equals(uid)) {
-                if (karta.dostepy.isEmpty()) {
-                    System.out.println("Brak dostępów do odebrania dla tej karty.");
-                    return;
+    public static void odbierzWejscie() {
+        Scanner scanner = new Scanner(System.in);
+        System.out.println("Wybierz użytkownika, któremu chcesz odebrać dostęp:");
+
+        for (int i = 0; i < ekstensja.size(); i++) {
+            KartaDostepu karta = ekstensja.get(i);
+            System.out.println((i + 1) + ". UID: " + karta.uid + " | " + karta.uzytkownik.getNazwisko());
+            System.out.println("  Dostępy: " + (karta.dostepy.isEmpty() ? "Brak dostępów" : String.join(", ", karta.dostepy)));
+        }
+
+        int wybor = -1;
+        while (wybor < 1 || wybor > ekstensja.size()) {
+            System.out.print("Wybierz numer użytkownika: ");
+            if (scanner.hasNextInt()) {
+                wybor = scanner.nextInt();
+                scanner.nextLine();
+                if (wybor < 1 || wybor > ekstensja.size()) {
+                    System.out.println("Niepoprawny numer użytkownika. Wybierz numer z listy.");
                 }
-                System.out.println("Dostępy użytkownika " + karta.uzytkownik.getImie()+" "+karta.uzytkownik.getNazwisko() + " (UID: " + karta.uid + "):");
-                for (int i = 0; i < karta.dostepy.size(); i++) {
-                    System.out.println((i + 1) + ". " + karta.dostepy.get(i));
-                }
-                System.out.print("Wybierz numer dostępu do usunięcia: ");
-                Scanner scanner = new Scanner(System.in);
-                int wybor = scanner.nextInt();
-                if (wybor >= 1 && wybor <= karta.dostepy.size()) {
-                    String removed = karta.dostepy.remove(wybor - 1);
-                    System.out.println("Usunięto dostęp do: " + removed);
-                } else {
-                    System.out.println("Niepoprawny wybór.");
-                }
-                return;
+            } else {
+                System.out.println("Błąd: Wprowadź poprawną liczbę.");
+                scanner.nextLine();
             }
         }
-        System.out.println("Nie znaleziono karty o UID: " + uid);
+
+        KartaDostepu karta = ekstensja.get(wybor - 1);
+
+        if (karta.dostepy.isEmpty()) {
+            System.out.println("Brak dostępów do odebrania dla tej karty.");
+            return;
+        }
+
+        System.out.println("Dostępy użytkownika " + karta.uzytkownik.getImie() + " " + karta.uzytkownik.getNazwisko() + " (UID: " + karta.uid + "):");
+
+        for (int i = 0; i < karta.dostepy.size(); i++) {
+            System.out.println((i + 1) + ". " + karta.dostepy.get(i));
+        }
+
+        int wyborDostepu = -1;
+        while (wyborDostepu < 1 || wyborDostepu > karta.dostepy.size()) {
+            System.out.print("Wybierz numer dostępu do usunięcia: ");
+            if (scanner.hasNextInt()) {
+                wyborDostepu = scanner.nextInt();
+                if (wyborDostepu < 1 || wyborDostepu > karta.dostepy.size()) {
+                    System.out.println("Niepoprawny wybór dostępu. Wybierz numer z listy.");
+                }
+            } else {
+                System.out.println("Błąd: Wprowadź poprawną liczbę.");
+                scanner.nextLine();
+            }
+        }
+
+        String removed = karta.dostepy.remove(wyborDostepu - 1);
+        System.out.println("Usunięto dostęp do: " + removed);
+    }
+
+    public static void wczytajEkstensje(String plik) throws IOException, ClassNotFoundException {
+        BufferedReader reader = new BufferedReader(new FileReader(plik));
+        String line;
+        while ((line = reader.readLine()) != null) {
+            String[] data = line.split(";");
+
+            if (data.length < 6) {
+                System.out.println("Błąd formatu danych w pliku. Pomijam linię: " + line);
+                continue;
+            }
+
+            String uid = data[0];
+            String imie = data[1];
+            String nazwisko = data[2];
+
+            String[] adresData = data[3].split(",");
+            if (adresData.length != 3) {
+                System.out.println("Błąd w danych adresu. Pomijam linię: " + line);
+                continue;
+            }
+            Adres adres = new Adres(adresData[0], adresData[1], adresData[2]);
+
+            Uzytkownik uzytkownik = new Uzytkownik(imie, nazwisko, adres);
+            uzytkownik.setTelefon(data[4]);
+
+            List<String> dostepy = new ArrayList<>();
+            if (data.length > 5 && !data[5].isEmpty()) {
+                String[] dostepyData = data[5].split(",");
+                Collections.addAll(dostepy, dostepyData);
+            }
+
+            boolean kartaIstnieje = ekstensja.stream().anyMatch(k -> k.uid.equals(uid));
+            if (kartaIstnieje) {
+                System.out.println("Karta o UID " + uid + " już istnieje. Pomijam duplikat.");
+                continue;
+            }
+
+            KartaDostepu karta = new KartaDostepu(uid, uzytkownik, LocalDate.now());
+            karta.dostepy.addAll(dostepy);
+        }
+        reader.close();
     }
 
     @Override
@@ -313,11 +388,10 @@ class KartaDostepu implements Serializable {
     }
 }
 
-
 class ZdarzenieDostepu implements Serializable {
-    private LocalDateTime data;
-    private String typ;
-    private String lokalizacja;
+    private final LocalDateTime data;
+    private final String typ;
+    private final String lokalizacja;
 
     public ZdarzenieDostepu(String typ, String lokalizacja) {
         this.data = LocalDateTime.now();

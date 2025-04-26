@@ -1,1 +1,4 @@
-12;ad;awda;daw,wd,89076;;
+124;Anna;Nowak;Kwiatowa 5,Kraków,30-002;987654321;Budynek B
+125;Marek;Wiśniewski;Leśna 9,Gdańsk,80-003;;Budynek C
+126;Piotr;Zieliński;Pilsudskiego 3,Wrocław,50-001;555444333;Budynek A,Budynek B
+127;Katarzyna;Wójcik;Jagiellońska 7,Łódź,90-002;;Budynek C
