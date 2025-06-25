@@ -52,8 +52,116 @@ public class Main {
                 case 2 -> KartaDostepu.pokazEkstensje();
                 case 3 -> KartaDostepu.usunKarte(scanner);
 
-                case 4 -> KartaDostepu.przydzielDostepDoDrzwi(scanner);
-                case 5 -> KartaDostepu.odbierzDostepOdDrzwi(scanner);
+                case 4 -> {
+                    List<KartaDostepu> listaKart = new ArrayList<>(KartaDostepu.getEkstensja().values());
+                    if (listaKart.isEmpty()) {
+                        System.out.println("Brak kart.");
+                        break;
+                    }
+
+                    System.out.println("Lista kart:");
+                    for (int i = 0; i < listaKart.size(); i++) {
+                        System.out.println((i + 1) + ". UID: " + listaKart.get(i).getUid() + ", " + listaKart.get(i).getUzytkownik().getImieNazwisko());
+                    }
+
+                    System.out.print("Wybierz numer karty: ");
+                    String input = scanner.nextLine();
+                    if (!input.matches("\\d+")) break;
+                    int wyborKarty = Integer.parseInt(input);
+                    if (wyborKarty < 1 || wyborKarty > listaKart.size()) break;
+
+                    KartaDostepu karta = listaKart.get(wyborKarty - 1);
+
+                    if (ListaBudynekow.budynki.isEmpty()) {
+                        System.out.println("Brak budynków.");
+                        break;
+                    }
+
+                    System.out.println("Lista budynków:");
+                    for (int i = 0; i < ListaBudynekow.budynki.size(); i++) {
+                        System.out.println((i + 1) + ". " + ListaBudynekow.budynki.get(i).getNazwa());
+                    }
+
+                    System.out.print("Wybierz numer budynku: ");
+                    input = scanner.nextLine();
+                    if (!input.matches("\\d+")) break;
+                    int wybBud = Integer.parseInt(input);
+                    if (wybBud < 1 || wybBud > ListaBudynekow.budynki.size()) break;
+
+                    Budynek budynek = ListaBudynekow.budynki.get(wybBud - 1);
+                    List<Drzwi> drzwiLista = new ArrayList<>(budynek.getDrzwi());
+                    if (drzwiLista.isEmpty()) {
+                        System.out.println("Brak drzwi w tym budynku.");
+                        break;
+                    }
+
+                    System.out.println("Lista drzwi:");
+                    for (int i = 0; i < drzwiLista.size(); i++) {
+                        System.out.println((i + 1) + ". " + drzwiLista.get(i).getNazwa());
+                    }
+
+                    System.out.print("Wybierz numer drzwi: ");
+                    input = scanner.nextLine();
+                    if (!input.matches("\\d+")) break;
+                    int wybDrzwi = Integer.parseInt(input);
+                    if (wybDrzwi < 1 || wybDrzwi > drzwiLista.size()) break;
+
+                    Drzwi drzwi = drzwiLista.get(wybDrzwi - 1);
+
+                    if (karta.maDostepDo(drzwi)) {
+                        System.out.println("Użytkownik już ma dostęp do tych drzwi.");
+                    } else {
+                        new Dostep(karta, drzwi); // automatycznie dodaje się do obu stron
+                        karta.getHistoriaZdarzen().add(new ZdarzenieDostepu("Przydzielono dostęp", budynek.getNazwa() + ":" + drzwi.getNazwa()));
+                        System.out.println("Przydzielono dostęp.");
+                    }
+                }
+
+                case 5 -> {
+                    List<KartaDostepu> listaKart = new ArrayList<>(KartaDostepu.getEkstensja().values());
+                    if (listaKart.isEmpty()) {
+                        System.out.println("Brak kart.");
+                        break;
+                    }
+
+                    System.out.println("Lista kart:");
+                    for (int i = 0; i < listaKart.size(); i++) {
+                        System.out.println((i + 1) + ". UID: " + listaKart.get(i).getUid() + ", " + listaKart.get(i).getUzytkownik().getImieNazwisko());
+                    }
+
+                    System.out.print("Wybierz numer karty: ");
+                    String input = scanner.nextLine();
+                    if (!input.matches("\\d+")) break;
+                    int wyborKarty = Integer.parseInt(input);
+                    if (wyborKarty < 1 || wyborKarty > listaKart.size()) break;
+
+                    KartaDostepu karta = listaKart.get(wyborKarty - 1);
+                    List<Dostep> dostepy = new ArrayList<>(karta.getDostepy());
+
+                    if (dostepy.isEmpty()) {
+                        System.out.println("Ta karta nie ma żadnych dostępów.");
+                        break;
+                    }
+
+                    System.out.println("Lista dostępów:");
+                    for (int i = 0; i < dostepy.size(); i++) {
+                        Dostep d = dostepy.get(i);
+                        System.out.println((i + 1) + ". " + d.getDrzwi().getBudynek().getNazwa() + ":" + d.getDrzwi().getNazwa());
+                    }
+
+                    System.out.print("Wybierz numer dostępu do usunięcia: ");
+                    input = scanner.nextLine();
+                    if (!input.matches("\\d+")) break;
+                    int wyb = Integer.parseInt(input);
+                    if (wyb < 1 || wyb > dostepy.size()) break;
+
+                    Dostep d = dostepy.get(wyb - 1);
+                    karta.usunDostep(d);
+                    d.getDrzwi().removeDostep(d);
+                    karta.getHistoriaZdarzen().add(new ZdarzenieDostepu("Odebrano dostęp", d.getDrzwi().getBudynek().getNazwa() + ":" + d.getDrzwi().getNazwa()));
+                    System.out.println("Dostęp został odebrany.");
+                }
+
 
                 case 6 -> {
                     System.out.print("Podaj nazwę budynku: ");
@@ -96,11 +204,15 @@ public class Main {
                     Budynek budynekDoUsuniecia = ListaBudynekow.budynki.get(wyb - 1);
 
                     for (KartaDostepu karta : KartaDostepu.getEkstensja().values()) {
-                        karta.getDostepy().removeIf(dostep -> {
-                            String[] parts = dostep.split(":");
-                            return parts.length == 2 && parts[0].equals(budynekDoUsuniecia.getNazwa());
-                        });
+                        List<Dostep> doUsuniecia = karta.getDostepy().stream()
+                                .filter(d -> d.getDrzwi().getBudynek() == budynekDoUsuniecia)
+                                .toList();
+                        for (Dostep d : doUsuniecia) {
+                            karta.usunDostep(d);
+                            d.getDrzwi().removeDostep(d);
+                        }
                     }
+
 
                     budynekDoUsuniecia.usunWszystkieDrzwi();
                     ListaBudynekow.budynki.remove(budynekDoUsuniecia);
@@ -138,13 +250,11 @@ public class Main {
                     System.out.print("Podaj nazwę drzwi: ");
                     String nazwaDrzwi = scanner.nextLine();
 
-                    boolean istniejaDrzwi = b.getDrzwi().stream()
-                            .anyMatch(d -> d.getNazwa().equalsIgnoreCase(nazwaDrzwi));
-                    if (istniejaDrzwi) {
+                    if (b.getDrzwi(nazwaDrzwi) != null) {
                         System.out.println("Drzwi o tej nazwie już istnieją w tym budynku!");
                     } else {
                         b.dodajDrzwi(nazwaDrzwi);
-                        System.out.println("Dodano drzwi do budynku.");
+                        System.out.println("Dodano drzwi do budynku: " + nazwaDrzwi);
                     }
                 }
 
@@ -167,22 +277,22 @@ public class Main {
                         break;
                     }
                     int wybBud = Integer.parseInt(wyborBudynku);
-
                     if (wybBud < 1 || wybBud > ListaBudynekow.budynki.size()) {
                         System.out.println("Nieprawidłowy wybór budynku.");
                         break;
                     }
 
                     Budynek budynek = ListaBudynekow.budynki.get(wybBud - 1);
+                    List<Drzwi> listaDrzwi = new ArrayList<>(budynek.getDrzwiMap().values());
 
-                    if (budynek.getDrzwi().isEmpty()) {
+                    if (listaDrzwi.isEmpty()) {
                         System.out.println("Brak drzwi w tym budynku.");
                         break;
                     }
 
                     System.out.println("Lista drzwi:");
-                    for (int i = 0; i < budynek.getDrzwi().size(); i++) {
-                        System.out.println((i + 1) + ". " + budynek.getDrzwi().get(i).getNazwa());
+                    for (int i = 0; i < listaDrzwi.size(); i++) {
+                        System.out.println((i + 1) + ". " + listaDrzwi.get(i).getNazwa());
                     }
 
                     System.out.print("Wybierz numer drzwi do usunięcia: ");
@@ -193,23 +303,24 @@ public class Main {
                     }
                     int wybDrzwi = Integer.parseInt(wyborDrzwi);
 
-                    if (wybDrzwi < 1 || wybDrzwi > budynek.getDrzwi().size()) {
+                    if (wybDrzwi < 1 || wybDrzwi > listaDrzwi.size()) {
                         System.out.println("Nieprawidłowy wybór drzwi.");
                         break;
                     }
 
-                    Drzwi drzwiDoUsuniecia = budynek.getDrzwi().get(wybDrzwi - 1);
+                    Drzwi drzwiDoUsuniecia = listaDrzwi.get(wybDrzwi - 1);
                     String nazwaDrzwi = drzwiDoUsuniecia.getNazwa();
 
-                    for (KartaDostepu karta : KartaDostepu.getEkstensja().values()) {
-                        karta.getDostepy().remove(nazwaDrzwi);
+
+                    for (Dostep d : new ArrayList<>(drzwiDoUsuniecia.getDostepy())) {
+                        d.getKarta().usunDostep(d);
+                        drzwiDoUsuniecia.removeDostep(d);
                     }
 
-                    budynek.getDrzwi().remove(drzwiDoUsuniecia);
+                    budynek.usunDrzwi(nazwaDrzwi);
 
-                    System.out.println("Usunięto drzwi: " + nazwaDrzwi + " oraz dostęp do tych drzwi z wszystkich kart.");
+                    System.out.println("Usunięto drzwi: " + nazwaDrzwi + " oraz wszystkie dostępy.");
                 }
-
 
 
                 case 10 -> {
@@ -328,7 +439,6 @@ class Adres implements Serializable {
 }
 
 
-
 class Uzytkownik extends Osoba implements Serializable {
     private final Adres adres;
 
@@ -355,15 +465,13 @@ class Uzytkownik extends Osoba implements Serializable {
 }
 
 
-
 class KartaDostepu implements Serializable {
     private static final Map<String, KartaDostepu> ekstensja = new HashMap<>();
     private final String uid;
     private final Uzytkownik uzytkownik;
-    private final List<String> dostepy = new ArrayList<>();
+    private final List<Dostep> dostepy = new ArrayList<>(); //asoscjacja zwykla
+    private final List<ZdarzenieDostepu> historiaZdarzen = new ArrayList<>();
     private LocalDate dataWydania;
-
-
 
     public KartaDostepu(String uid, Uzytkownik uzytkownik, LocalDate dataWydania) {
         this.uid = uid;
@@ -377,7 +485,8 @@ class KartaDostepu implements Serializable {
         String imie;
         while (true) {
             System.out.print("Podaj imię: ");
-            imie = scanner.nextLine();
+
+            imie = scanner.nextLine().trim();
             if (imie.matches("[A-Za-ząćęłńóśźżĄĆĘŁŃÓŚŹŻ]+")) break;
             System.out.println("Błąd: Imię może zawierać tylko litery.");
         }
@@ -385,7 +494,7 @@ class KartaDostepu implements Serializable {
         String nazwisko;
         while (true) {
             System.out.print("Podaj nazwisko: ");
-            nazwisko = scanner.nextLine();
+            nazwisko = scanner.nextLine().trim();
             if (nazwisko.matches("[A-Za-ząćęłńóśźżĄĆĘŁŃÓŚŹŻ]+")) break;
             System.out.println("Błąd: Nazwisko może zawierać tylko litery.");
         }
@@ -395,48 +504,37 @@ class KartaDostepu implements Serializable {
         System.out.print("Podaj miasto: ");
         String miasto = scanner.nextLine();
         System.out.print("Podaj kod pocztowy: ");
-        String kod ;
+        String kod;
         while (true) {
             System.out.print("Podaj kod pocztowy (format xx-xxx): ");
-            kod = scanner.nextLine();
+            kod = scanner.nextLine().trim();
             if (kod.matches("\\d{2}-\\d{3}")) break;
             System.out.println("Błąd: Kod pocztowy musi być w formacie xx-xxx.");
         }
         String telefon;
         while (true) {
             System.out.print("Telefon (6 cyfr, opcjonalny, Enter aby pominąć): ");
-            telefon = scanner.nextLine();
+            telefon = scanner.nextLine().trim();
             if (telefon.isBlank() || telefon.matches("\\d{9}")) break;
             System.out.println("Błąd: Telefon musi mieć dokładnie 6 cyfr lub pozostaw puste.");
         }
 
 
-
-
         String uid;
         while (true) {
             System.out.print("Podaj UID karty (tylko cyfry): ");
-            uid = scanner.nextLine();
+            uid = scanner.nextLine().trim();
             if (uid.matches("\\d+") && !ekstensja.containsKey(uid)) break;
             System.out.println("Błąd: UID musi być liczbą i nie może się powtarzać.");
         }
 
         Adres adres = new Adres(ulica, miasto, kod);
         Uzytkownik u = new Uzytkownik(imie, nazwisko, adres);
-        u.setTelefon(telefon); // Nawet jeśli puste, będzie OK.
+        u.setTelefon(telefon);
 
         new KartaDostepu(uid, u, LocalDate.now());
         System.out.println("Dodano użytkownika i kartę.");
     }
-
-    public static void dodajNowaKarte(String imie, String nazwisko, String ulica, String miasto, String kod, String telefon, String uid) {
-        Adres adres = new Adres(ulica, miasto, kod);
-        Uzytkownik u = new Uzytkownik(imie, nazwisko, adres);
-        u.setTelefon(telefon);
-        new KartaDostepu(uid, u, LocalDate.now());
-    }
-
-
 
     public static void pokazEkstensje() {
         for (KartaDostepu karta : ekstensja.values()) {
@@ -448,38 +546,20 @@ class KartaDostepu implements Serializable {
             if (karta.dostepy.isEmpty()) {
                 System.out.println("brak");
             } else {
-                Map<String, List<String>> dostepyGrupowane = new LinkedHashMap<>();
+                Map<String, List<String>> grupy = new LinkedHashMap<>();
 
-                for (String dostep : karta.dostepy) {
-                    String[] parts = dostep.split(":");
-                    if (parts.length == 2) {
-                        String budynek = parts[0];
-                        String drzwi = parts[1];
-                        dostepyGrupowane.computeIfAbsent(budynek, k -> new ArrayList<>()).add(drzwi);
-                    }
+                for (Dostep d : karta.dostepy) {
+                    String budynek = d.getDrzwi().getBudynek().getNazwa();
+                    String drzwiInfo = d.getDrzwi().getNazwa() + " (" + d.getDataPrzydzielenia() + ")";
+                    grupy.computeIfAbsent(budynek, k -> new ArrayList<>()).add(drzwiInfo);
                 }
 
-                for (String drzwiNazwa : karta.dostepy) {
-                    for (Budynek budynek : ListaBudynekow.budynki) {
-                        for (Drzwi drzwi : budynek.getDrzwi()) {
-                            if (drzwi.getNazwa().equals(drzwiNazwa)) {
-                                dostepyGrupowane.computeIfAbsent(budynek.getNazwa(), k -> new ArrayList<>())
-                                        .add(drzwiNazwa);
-
-                            }
-                        }
-                    }
+                List<String> doWyswietlenia = new ArrayList<>();
+                for (Map.Entry<String, List<String>> entry : grupy.entrySet()) {
+                    doWyswietlenia.add(entry.getKey() + " [" + String.join(", ", entry.getValue()) + "]");
                 }
 
-
-                List<String> listaWyswietlania = new ArrayList<>();
-                for (Map.Entry<String, List<String>> entry : dostepyGrupowane.entrySet()) {
-                    String budynek = entry.getKey();
-                    List<String> drzwiWbudynku = entry.getValue();
-                    listaWyswietlania.add(budynek + " [" + String.join(", ", drzwiWbudynku) + "]");
-                }
-
-                System.out.println(String.join(", ", listaWyswietlania));
+                System.out.println(String.join(", ", doWyswietlenia));
             }
 
             System.out.println("Data wydania: " + karta.dataWydania);
@@ -487,22 +567,16 @@ class KartaDostepu implements Serializable {
         }
     }
 
-
-
-
-
-
     public static void usunKarte(Scanner scanner) {
         if (ekstensja.isEmpty()) {
             System.out.println("Brak kart do usunięcia.");
             return;
         }
 
-        System.out.println("Lista aktywnych kart:");
         List<KartaDostepu> listaKart = new ArrayList<>(ekstensja.values());
-
         for (int i = 0; i < listaKart.size(); i++) {
-            System.out.println((i + 1) + ". UID: " + listaKart.get(i).uid + ", Użytkownik: " + listaKart.get(i).uzytkownik.getImieNazwisko());
+            KartaDostepu k = listaKart.get(i);
+            System.out.println((i + 1) + ". UID: " + k.uid + ", Użytkownik: " + k.uzytkownik.getImieNazwisko());
         }
 
         System.out.print("Wybierz numer karty do usunięcia: ");
@@ -511,225 +585,25 @@ class KartaDostepu implements Serializable {
             System.out.println("Nieprawidłowy wybór (podaj liczbę).");
             return;
         }
-        int wybor = Integer.parseInt(wyborKarty);
 
-        if (wybor < 1 || wybor > listaKart.size()) {
-            System.out.println("Nieprawidłowy wybór karty.");
+        int index = Integer.parseInt(wyborKarty) - 1;
+        if (index < 0 || index >= listaKart.size()) {
+            System.out.println("Nieprawidłowy numer.");
             return;
         }
 
-        KartaDostepu kartaDoUsuniecia = listaKart.get(wybor - 1);
-        ekstensja.remove(kartaDoUsuniecia.uid);
-        System.out.println("Usunięto kartę UID: " + kartaDoUsuniecia.uid + ", Użytkownik: " + kartaDoUsuniecia.uzytkownik.getPelneDane());
+        KartaDostepu karta = listaKart.get(index);
+
+        // usuniecie wszystkich asocjacji Dostep
+        List<Dostep> kopiaDostepow = new ArrayList<>(karta.dostepy);
+        for (Dostep d : kopiaDostepow) {
+            d.getDrzwi().removeDostep(d);
+            karta.dostepy.remove(d);
+        }
+
+        ekstensja.remove(karta.uid);
+        System.out.println("Usunięto kartę UID: " + karta.uid + ", Użytkownik: " + karta.uzytkownik.getImieNazwisko());
     }
-
-
-    private final List<ZdarzenieDostepu> historiaZdarzen = new ArrayList<>();
-
-    public List<ZdarzenieDostepu> getHistoriaZdarzen() {
-        return historiaZdarzen;
-    }
-
-
-    public static void przydzielDostepDoDrzwi(Scanner scanner) {
-        if (ListaBudynekow.budynki.isEmpty()) {
-            System.out.println("Brak budynków do przypisania.");
-            return;
-        }
-
-        boolean saJakiesDrzwi = ListaBudynekow.budynki.stream()
-                .anyMatch(b -> !b.getDrzwi().isEmpty());
-
-        if (!saJakiesDrzwi) {
-            System.out.println("Brak drzwi do przydzielenia. Najpierw dodaj drzwi do budynków.");
-            return;
-        }
-
-        System.out.println("Lista użytkowników:");
-        List<KartaDostepu> listaKart = new ArrayList<>(ekstensja.values());
-        for (int i = 0; i < listaKart.size(); i++) {
-            System.out.println((i + 1) + ". UID: " + listaKart.get(i).uid + ", Użytkownik: " + listaKart.get(i).uzytkownik.getImieNazwisko());
-        }
-
-        System.out.print("Wybierz numer użytkownika: ");
-        String wyborKarty = scanner.nextLine();
-        if (!wyborKarty.matches("\\d+")) {
-            System.out.println("Nieprawidłowy wybór (podaj liczbę).");
-            return;
-        }
-        int numerKarty = Integer.parseInt(wyborKarty);
-        if (numerKarty < 1 || numerKarty > listaKart.size()) {
-            System.out.println("Nieprawidłowy wybór karty.");
-            return;
-        }
-        KartaDostepu karta = listaKart.get(numerKarty - 1);
-
-        System.out.println("Lista budynków:");
-        for (int i = 0; i < ListaBudynekow.budynki.size(); i++) {
-            System.out.println((i + 1) + ". " + ListaBudynekow.budynki.get(i).getNazwa());
-        }
-
-        System.out.print("Wybierz numer budynku: ");
-        String wyborBudynku = scanner.nextLine();
-        if (!wyborBudynku.matches("\\d+")) {
-            System.out.println("Nieprawidłowy wybór (podaj liczbę).");
-            return;
-        }
-        int wybBud = Integer.parseInt(wyborBudynku);
-        if (wybBud < 1 || wybBud > ListaBudynekow.budynki.size()) {
-            System.out.println("Nieprawidłowy wybór budynku.");
-            return;
-        }
-        Budynek b = ListaBudynekow.budynki.get(wybBud - 1);
-
-        if (b.getDrzwi().isEmpty()) {
-            System.out.println("Brak drzwi w tym budynku.");
-            return;
-        }
-
-        System.out.println("0. Przydziel dostęp do wszystkich drzwi");
-        for (int i = 0; i < b.getDrzwi().size(); i++) {
-            System.out.println((i + 1) + ". " + b.getDrzwi().get(i).getNazwa());
-        }
-
-        System.out.print("Wybierz numer drzwi (lub 0 - wszystkie): ");
-        String wyborDrzwi = scanner.nextLine();
-        if (!wyborDrzwi.matches("\\d+")) {
-            System.out.println("Nieprawidłowy wybór (podaj liczbę).");
-            return;
-        }
-        int wybDrzwi = Integer.parseInt(wyborDrzwi);
-
-        if (wybDrzwi == 0) {
-            for (Drzwi drzwi : b.getDrzwi()) {
-                String pelnaNazwaDrzwi = b.getNazwa() + ":" + drzwi.getNazwa();
-                if (!karta.dostepy.contains(pelnaNazwaDrzwi)) {
-                    karta.dostepy.add(pelnaNazwaDrzwi);
-                    karta.historiaZdarzen.add(new ZdarzenieDostepu("Przydzielono dostęp", pelnaNazwaDrzwi));
-                } else {
-                    System.out.println("Użytkownik już ma dostęp do drzwi: " + drzwi.getNazwa());
-                }
-            }
-
-            System.out.println("Przydzielono dostęp do wszystkich drzwi.");
-        } else if (wybDrzwi >= 1 && wybDrzwi <= b.getDrzwi().size()) {
-            String nazwaWybranychDrzwi = b.getDrzwi().get(wybDrzwi - 1).getNazwa();
-            String pelnaNazwaDrzwi = b.getNazwa() + ":" + nazwaWybranychDrzwi;
-
-            if (!karta.dostepy.contains(pelnaNazwaDrzwi)) {
-                karta.dostepy.add(pelnaNazwaDrzwi);
-                karta.historiaZdarzen.add(new ZdarzenieDostepu("Przydzielono dostęp", pelnaNazwaDrzwi));
-                System.out.println("Przydzielono dostęp do wybranych drzwi.");
-            } else {
-                System.out.println("Użytkownik już ma dostęp do tych drzwi: " + nazwaWybranychDrzwi);
-            }
-
-        } else {
-            System.out.println("Nieprawidłowy wybór drzwi.");
-        }
-    }
-
-    public String getUid() {
-        return uid;
-    }
-
-    public Uzytkownik getUzytkownik() {
-        return uzytkownik;
-    }
-
-    public static void odbierzDostepOdDrzwi(Scanner scanner) {
-        if (ListaBudynekow.budynki.isEmpty()) {
-            System.out.println("Brak budynków.");
-            return;
-        }
-
-        boolean saJakiesDrzwi = ListaBudynekow.budynki.stream()
-                .anyMatch(b -> !b.getDrzwi().isEmpty());
-
-        if (!saJakiesDrzwi) {
-            System.out.println("Brak drzwi w systemie.");
-            return;
-        }
-
-        System.out.println("Lista użytkowników:");
-        List<KartaDostepu> listaKart = new ArrayList<>(ekstensja.values());
-        for (int i = 0; i < listaKart.size(); i++) {
-            System.out.println((i + 1) + ". UID: " + listaKart.get(i).uid + ", Użytkownik: " + listaKart.get(i).uzytkownik.getImieNazwisko());
-        }
-        System.out.print("Wybierz numer użytkownika: ");
-        String wyborKarty = scanner.nextLine();
-        if (!wyborKarty.matches("\\d+")) {
-            System.out.println("Nieprawidłowy wybór (podaj liczbę).");
-            return;
-        }
-        int numerKarty = Integer.parseInt(wyborKarty);
-        if (numerKarty < 1 || numerKarty > listaKart.size()) {
-            System.out.println("Nieprawidłowy wybór karty.");
-            return;
-        }
-        KartaDostepu karta = listaKart.get(numerKarty - 1);
-
-        System.out.println("Lista budynków:");
-        for (int i = 0; i < ListaBudynekow.budynki.size(); i++) {
-            System.out.println((i + 1) + ". " + ListaBudynekow.budynki.get(i).getNazwa());
-        }
-        System.out.print("Wybierz numer budynku: ");
-        String wyborBudynku = scanner.nextLine();
-        if (!wyborBudynku.matches("\\d+")) {
-            System.out.println("Nieprawidłowy wybór (podaj liczbę).");
-            return;
-        }
-        int wybBud = Integer.parseInt(wyborBudynku);
-        if (wybBud < 1 || wybBud > ListaBudynekow.budynki.size()) {
-            System.out.println("Nieprawidłowy wybór budynku.");
-            return;
-        }
-        Budynek b = ListaBudynekow.budynki.get(wybBud - 1);
-
-        if (b.getDrzwi().isEmpty()) {
-            System.out.println("Brak drzwi w tym budynku.");
-            return;
-        }
-
-        System.out.println("0. Odbierz dostęp do wszystkich drzwi");
-        for (int i = 0; i < b.getDrzwi().size(); i++) {
-            System.out.println((i + 1) + ". " + b.getDrzwi().get(i).getNazwa());
-        }
-        System.out.print("Wybierz numer drzwi (lub 0 - wszystkie): ");
-        String wyborDrzwi = scanner.nextLine();
-        if (!wyborDrzwi.matches("\\d+")) {
-            System.out.println("Nieprawidłowy wybór (podaj liczbę).");
-            return;
-        }
-        int wybDrzwi = Integer.parseInt(wyborDrzwi);
-
-        if (wybDrzwi == 0) {
-            boolean jakikolwiekUsuniety = false;
-            for (Drzwi drzwi : b.getDrzwi()) {
-                if (karta.dostepy.remove(drzwi.getNazwa())) {
-                    jakikolwiekUsuniety = true;
-                    karta.historiaZdarzen.add(new ZdarzenieDostepu("Odebrano dostęp", drzwi.getNazwa()));
-                }
-            }
-            if (jakikolwiekUsuniety) {
-                System.out.println("Odebrano dostęp do wszystkich drzwi.");
-            } else {
-                System.out.println("Użytkownik nie miał dostępu do żadnych drzwi w tym budynku.");
-            }
-        } else if (wybDrzwi >= 1 && wybDrzwi <= b.getDrzwi().size()) {
-            String nazwaWybranychDrzwi = b.getDrzwi().get(wybDrzwi - 1).getNazwa();
-            if (karta.dostepy.remove(nazwaWybranychDrzwi)) {
-                karta.historiaZdarzen.add(new ZdarzenieDostepu("Odebrano dostęp", nazwaWybranychDrzwi));
-                System.out.println("Odebrano dostęp do wybranych drzwi.");
-            } else {
-                System.out.println("Użytkownik nie miał dostępu do tych drzwi: " + nazwaWybranychDrzwi);
-            }
-        } else {
-            System.out.println("Nieprawidłowy wybór drzwi.");
-        }
-    }
-
-
 
     public static void zapiszEkstensje(String plik) throws IOException {
         ObjectOutputStream out = new ObjectOutputStream(new FileOutputStream(plik));
@@ -752,18 +626,40 @@ class KartaDostepu implements Serializable {
         return ekstensja;
     }
 
-    public List<String> getDostepy() {
-        return dostepy;
+    //asocjacja zwykla
+    public void dodajDostep(Dostep d) {
+        if (!dostepy.contains(d)) dostepy.add(d);
     }
 
+    public void usunDostep(Dostep d) {
+        dostepy.remove(d);
+    }
+
+    public List<Dostep> getDostepy() {
+        return Collections.unmodifiableList(dostepy);
+    }
+
+    public boolean maDostepDo(Drzwi drzwi) {
+        return dostepy.stream().anyMatch(d -> d.getDrzwi().equals(drzwi));
+    }
+
+    public List<ZdarzenieDostepu> getHistoriaZdarzen() {
+        return historiaZdarzen;
+    }
+
+    public String getUid() {
+        return uid;
+    }
+
+    public Uzytkownik getUzytkownik() {
+        return uzytkownik;
+    }
 
     @Override
     public String toString() {
         return "UID: " + uid + ", Użytkownik: " + uzytkownik + ", Dostępy: " + dostepy + ", Data wydania: " + dataWydania;
     }
 }
-
-
 
 
 class ZdarzenieDostepu implements Serializable {
@@ -783,28 +679,10 @@ class ZdarzenieDostepu implements Serializable {
     }
 }
 
-class Drzwi implements Serializable {
-    private final String nazwa;
-    private final Budynek budynek;
-
-    public Drzwi(String nazwa, Budynek budynek) {
-        this.nazwa = nazwa;
-        this.budynek = budynek;
-    }
-
-    @Override
-    public String toString() {
-        return "Drzwi: " + nazwa + " (Budynek: " + budynek.getNazwa() + ")";
-    }
-
-    public String getNazwa() {
-        return nazwa;
-    }
-}
 
 class Budynek implements Serializable {
     private final String nazwa;
-    private final List<Drzwi> drzwi = new ArrayList<>();
+    private final Map<String, Drzwi> drzwiMap = new HashMap<>(); // kwalifikowana
 
     public Budynek(String nazwa) {
         this.nazwa = nazwa;
@@ -814,28 +692,57 @@ class Budynek implements Serializable {
         return nazwa;
     }
 
+    // Kwalifikowana asocjacja
     public void dodajDrzwi(String nazwaDrzwi) {
-        drzwi.add(new Drzwi(nazwaDrzwi, this));
+        if (!drzwiMap.containsKey(nazwaDrzwi)) {
+            Drzwi noweDrzwi = Drzwi.stworz(nazwaDrzwi, this);
+            drzwiMap.put(nazwaDrzwi, noweDrzwi);
+        } else {
+            System.out.println("Drzwi o tej nazwie już istnieją w budynku.");
+        }
     }
 
     public List<Drzwi> getDrzwi() {
-        return drzwi;
+        return new ArrayList<>(drzwiMap.values());
     }
 
-    public void pokazDrzwi() {
-        if (drzwi.isEmpty()) {
-            System.out.println("Brak drzwi w budynku " + nazwa);
-        } else {
-            for (int i = 0; i < drzwi.size(); i++) {
-                System.out.println((i + 1) + ". " + drzwi.get(i));
-            }
+    public Drzwi getDrzwi(String nazwa) {
+        return drzwiMap.get(nazwa); // kwalifikowana asocjacja
+    }
+
+    public Map<String, Drzwi> getDrzwiMap() {
+        return Collections.unmodifiableMap(drzwiMap);
+    }
+
+    public void usunDrzwi(String nazwa) {
+        Drzwi drzwi = drzwiMap.remove(nazwa);
+        if (drzwi != null) {
+            drzwi.usunWszystkieDostepy(); // kompozycja – usuń powiązania
+            Drzwi.usunZGlobalnegoZbioru(drzwi); // usuń z globalnego zbioru
         }
     }
 
     public void usunWszystkieDrzwi() {
-        drzwi.clear();
+        for (Drzwi drzwi : drzwiMap.values()) {
+            drzwi.usunWszystkieDostepy();
+            Drzwi.usunZGlobalnegoZbioru(drzwi); // usuń z globalnego zbioru
+        }
+        drzwiMap.clear();
+    }
+
+    public void pokazDrzwi() {
+        if (drzwiMap.isEmpty()) {
+            System.out.println("Brak drzwi w budynku " + nazwa);
+        } else {
+            int i = 1;
+            for (Drzwi d : drzwiMap.values()) {
+                System.out.println((i++) + ". " + d);
+            }
+        }
     }
 }
+
+
 
 class ListaBudynekow {
     public static final List<Budynek> budynki = new ArrayList<>();
@@ -857,7 +764,9 @@ class ListaBudynekow {
             in.close();
         }
     }
+
 }
+
 class Osoba implements Serializable {
     protected String imie;
     protected String nazwisko;
@@ -880,3 +789,119 @@ class Osoba implements Serializable {
         return imie + " " + nazwisko;
     }
 }
+
+class Dostep implements Serializable {
+    private final KartaDostepu karta;
+    private final Drzwi drzwi;
+    private final LocalDate dataPrzydzielenia;  //asocjacja z atrybutem
+
+    //asocjacja automatycznie laczy obie strony
+    public Dostep(KartaDostepu karta, Drzwi drzwi) {
+        if (karta == null || drzwi == null) throw new IllegalArgumentException("Dostęp wymaga karty i drzwi");
+
+        this.karta = karta;
+        this.drzwi = drzwi;
+        this.dataPrzydzielenia = LocalDate.now();
+
+        karta.dodajDostep(this);
+        drzwi.dodajDostep(this);
+    }
+
+    public KartaDostepu getKarta() {
+        return karta;
+    }
+
+    public Drzwi getDrzwi() {
+        return drzwi;
+    }
+
+    public LocalDate getDataPrzydzielenia() {
+        return dataPrzydzielenia;
+    }
+
+    @Override
+    public String toString() {
+        return "Dostęp do drzwi: " + drzwi.getNazwa() + " (budynek: " + drzwi.getBudynek().getNazwa() +
+                ") | karta UID: " + karta.getUid() + " | od: " + dataPrzydzielenia;
+    }
+}
+
+class Drzwi implements Serializable {
+    private static final Set<Drzwi> wszystkieDrzwi = new HashSet<>(); // globalny zbiór do kompozycji
+
+    private final String nazwa;
+    private final Budynek budynek;
+    private final List<Dostep> dostepy = new ArrayList<>(); // asocjacja zwykła
+
+    //kompozycja
+    private Drzwi(String nazwa, Budynek budynek) {
+        this.nazwa = nazwa;
+        this.budynek = budynek;
+    }
+
+    //jedyny sposób tworzenia drzwi
+    public static Drzwi stworz(String nazwa, Budynek budynek) {
+        if (nazwa == null || budynek == null) {
+            throw new IllegalArgumentException("Nazwa i budynek nie mogą być null");
+        }
+        Drzwi noweDrzwi = new Drzwi(nazwa, budynek);
+        if (wszystkieDrzwi.contains(noweDrzwi)) {
+            throw new IllegalArgumentException("Drzwi już istnieją (nie mogą być współdzielone między budynkami)");
+        }
+        wszystkieDrzwi.add(noweDrzwi);
+        return noweDrzwi;
+    }
+
+    public static void usunZGlobalnegoZbioru(Drzwi drzwi) {
+        wszystkieDrzwi.remove(drzwi);
+    }
+
+    public String getNazwa() {
+        return nazwa;
+    }
+
+    public Budynek getBudynek() {
+        return budynek;
+    }
+
+    public List<Dostep> getDostepy() {
+        return Collections.unmodifiableList(dostepy);
+    }
+
+    public void dodajDostep(Dostep d) {
+        if (!dostepy.contains(d)) {
+            dostepy.add(d);
+        }
+    }
+
+    public void removeDostep(Dostep d) {
+        dostepy.remove(d);
+    }
+
+    public void usunWszystkieDostepy() {
+        for (Dostep d : new ArrayList<>(dostepy)) {
+            d.getKarta().usunDostep(d);
+        }
+        dostepy.clear();
+    }
+
+    @Override
+    public String toString() {
+        return "Drzwi: " + nazwa + " (Budynek: " + budynek.getNazwa() + ")";
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        Drzwi drzwi = (Drzwi) o;
+        return Objects.equals(nazwa, drzwi.nazwa) && Objects.equals(budynek, drzwi.budynek);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(nazwa, budynek);
+    }
+}
+
+//
